@@ -4,22 +4,25 @@ const productSchema = new mongoose.Schema(
   {
     productName: {
       type: String,
-      required:true,
-      unique:true,
+      required: true,
+      unique: true,
     },
+    // imageUrl:{
+    //   type:String,
+    // },
     description: {
       type: String,
     },
-    categorieId: {
+    categoryId: {
       type: mongoose.Schema.Types.ObjectId,
-      ref: 'categories',
+      ref: "categoryId",
     },
     productDetails: {
       type: String,
     },
     price: {
       type: Number,
-      required:true,
+      required: true,
     },
     color: {
       type: String,
@@ -40,9 +43,10 @@ const productSchema = new mongoose.Schema(
     },
   },
   {
+    versionKey: false,
     timestamps: true,
   }
-  );  
+);
 
 const productModel = mongoose.model("Product", productSchema);
 

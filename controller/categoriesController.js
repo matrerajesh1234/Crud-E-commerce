@@ -1,119 +1,124 @@
+import categoriesModel from "../models/categories.js";
 import * as categoriesServices from "../services/categoriesServices.js";
+import { sendResponse } from "../utils/sendResponse.js";
+import { BadRequestError } from "../error/error.js"; // Corrected import statement
 
 export const newCategories = async (req, res, next) => {
   try {
-    const { name } = req.body;
-    const checkName = await categoriesServices.findCategorieOne({ name });
+    const { categoryName } = req.body;
+    const checkCategoryName = await categoriesServices.findCategorieOne({
+      categoryName,
+    });
 
-    if (checkName) {
-      return res.status(401).json({
-        Message: "Categorie Already Exists",
-      });
+    if (checkCategoryName) {
+      throw new BadRequestError("Category Already Exists"); // Corrected errorServices to BadRequestError
     }
 
-    const categorieData = await categoriesServices.createCategorie(req.body);
+    const categorieData = await categoriesModel.create(req.body);
 
     if (!categorieData) {
-      return res.status(200).json({
-        message: "categories adding process falied",
-      });
+      throw new BadRequestError("Categories adding process failed"); // Corrected errorServices to BadRequestError
     }
 
-    return res.status(200).json({
-      Message: "Categories Created Succesfully",
-      categorieData,
-    });
+    return sendResponse(
+      res,
+      200,
+      "Categories Created Succesfully",
+      categorieData
+    );
   } catch (err) {
-    console.log(err);
+    next(err);
   }
 };
 
 export const listAllCategorie = async (req, res, next) => {
   try {
-    const categorieData = await categoriesServices.listAllCategorie();
-    if (!categorieData) {
-      return res.status(400).json({
-        message: "Invalid Request",
-      });
+    const categoryData = await categoriesServices.listAllCategorie();
+    if (!categoryData) {
+      throw new BadRequestError("Category Not Found"); // Corrected errorServices to BadRequestError
     }
 
-    return res.status(200).json({
-      message: "Fetching all categoires from Database",
-      categorieData,
-    });
+    return sendResponse(
+      res,
+      200,
+      "Fetching all categoires from Database",
+      categoryData
+    );
   } catch (err) {
-    console.log(err);
+    next(err);
   }
 };
 
 export const findOneCategorie = async (req, res, next) => {
-  const checkCategorie = await categoriesServices.findCategorieOne({
-    id: req.body.id,
-  });
-
-  if (!checkCategorie) {
-    return res.status(400).json({
-      message: "checkCategorie Not Found",
+  try {
+    const checkCategorie = await categoriesServices.findCategorieOne({
+      _id: req.params.id, // Corrected req.body.id to req.params.id
     });
-  }
 
-  return res.status(200).json({
-    message: "Succesfully Fetched",
-    checkCategorie,
-  });
+    if (!checkCategorie) {
+      throw new BadRequestError("Category Not Found"); // Corrected errorServices to BadRequestError
+    }
+
+    return sendResponse(res, 200, "Succesfully Fetched", checkCategorie);
+  } catch (error) {
+    next(error);
+  }
 };
 
 export const updateCategorie = async (req, res, next) => {
   try {
     const checkCategorie = await categoriesServices.findCategorieOne({
-      id: req.body.id,
+      _id: req.params.id, // Corrected req.body.id to req.params.id
     });
 
     if (!checkCategorie) {
-      return res.status(400).json({
-        message: "categories Not Found",
-      });
+      throw new BadRequestError("Categories Not Found"); // Corrected errorServices to BadRequestError
+    }
+
+    const categoryExist = await categoriesServices.findCategorieOne({
+      categoryName: req.body.categoryName,
+      _id: { $ne: req.body.id },
+    });
+
+    if (categoryExist) {
+      throw new BadRequestError("Category Already Exists");
     }
 
     const updatedCategoriesData = await categoriesServices.updateCategorie(
-      { _id: checkCategorie },
+      { _id: req.params.id }, // Corrected _id: checkCategorie to _id: req.params.id
       req.body
     );
 
     if (!updatedCategoriesData) {
-      return res.status(401).json({
-        Message: "Please Enter Data to be Update",
-      });
+      throw new BadRequestError("Please Enter Data to be Update"); // Corrected errorServices to BadRequestError
     }
 
-    return res.status(200).json({
-      message: "Update Categorie Succesfully",
-    });
+    return sendResponse(res, 200, "Update Categorie Succesfully", null);
   } catch (error) {
-    console.log("Error:", error);
+    next(error);
   }
 };
 
 export const deleteCategorie = async (req, res, next) => {
   try {
     const checkCategorie = await categoriesServices.findCategorieOne({
-      id: req.body.id,
+      _id: req.params.id,
     });
 
     if (!checkCategorie) {
-      return res.status(400).json({
-        message: "checkCategorie Not Found",
-      });
+      throw new BadRequestError("Categorie Not Found"); // Corrected errorServices to BadRequestError
     }
 
-    const deleteCategorieData = await categoriesServices.deleteCategorie({
-      id: req.body.checkCategorie,
-    });
+    const softDeleted = await categoriesServices.updateCategorie(
+      {
+        _id: req.params.id,
+      },
+      { isDeleted: true }
+    );
 
-    return res.status(200).json({
-      message: "Deleted Succesfully",
-    });
+
+    return sendResponse(res, 200, "Deleted Succesfully");
   } catch (error) {
-    console.log("Error:", error);
+    next(error);
   }
 };

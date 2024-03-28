@@ -5,11 +5,20 @@ export const createUser = async (userData) => {
 };
 
 export const listAllUser = async () => {
-  return await userModel.find();
+  const userListFilter = {
+    isDeleted: false,
+    isActive: true,
+  };
+  return await userModel.find(userListFilter);
 };
 
 export const userFindOne = async (filter, option) => {
-  return await userModel.findOne(filter, option);
+  const userFilter = {
+    ...filter,
+    isActive: true,
+    isDeleted: false,
+  };
+  return await userModel.findOne(userFilter, option);
 };
 
 export const updateUser = async (userId, userData) => {

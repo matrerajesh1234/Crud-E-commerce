@@ -5,11 +5,20 @@ export const createCategorie = async (categoriesData) => {
 };
 
 export const listAllCategorie = async () => {
-  return await categoriesModel.find();
+  const categoryListFilter = {
+    isActive: true,
+    isDeleted: false,
+  };
+  return await categoriesModel.find(categoryListFilter);
 };
 
 export const findCategorieOne = async (filter, option) => {
-  return await categoriesModel.findOne(filter, option);
+  const categoryFilter = {
+    ...filter,
+    isActive: true,
+    isDeleted: false,
+  };
+  return await categoriesModel.findOne(categoryFilter, option);
 };
 
 export const updateCategorie = async (categoriesId, categoriesData) => {

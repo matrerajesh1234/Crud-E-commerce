@@ -1,4 +1,8 @@
 import * as productServices from "../services/productServices.js";
+import { paginationAndSorting, search } from "../utils/services.js";
+import { sendResponse } from "../utils/sendResponse.js";
+import { BadRequestError } from "../error/error.js"; // Corrected import statement
+import productModel from "../models/productModel.js";
 
 export const newProduct = async (req, res, next) => {
   try {
@@ -6,114 +10,120 @@ export const newProduct = async (req, res, next) => {
     const checkProduct = await productServices.findProductOne({ productName });
 
     if (checkProduct) {
-      return res.status(401).json({
-        Message: "product Already Exists",
-      });
+      throw new BadRequestError("Product Already Exists"); // Corrected errorServices to BadRequestError
     }
 
-    const productData = await productServices.createProduct(req.body);
+    const productList = await productServices.createProduct(req.body);
 
-    if (!productData) {
-      return res.status(200).json({
-        message: "Product adding process falied",
-      });
+    if (!productList) {
+      throw new BadRequestError("Product Adding Process Failed"); // Corrected errorServices to BadRequestError
     }
-    return res.status(200).json({
-      Message: "Product Created Succesfully",
-      productData,
-    });
+
+    return sendResponse(res, 200, "Product Added", productList);
   } catch (err) {
-    console.log(err);
+    next(err);
   }
 };
 
 export const listAllProduct = async (req, res, next) => {
   try {
-    const productData = await productServices.listAllProduct();
+    const pagination = paginationAndSorting(req.query, "_id");
+    const searching = search(req.query.search, [
+      "productName",
+      "color",
+      "description",
+      "category.categoryName",
+    ]);
+    const aggregationResult = await productServices.executeAggregation(
+      pagination,
+      searching
+    );
 
-    if (!productData) {
-      return res.status(400).json({
-        message: "Invalid Request",
-      });
+    if (!aggregationResult || aggregationResult.length === 0) {
+      throw new BadRequestError("Product Not Found"); // Corrected errorServices to BadRequestError
     }
-
-    return res.status(200).json({
-      message: "Fetching all product from Database",
-      productData,
-    });
+    return sendResponse(
+      res,
+      200,
+      "Fetching all products from the database",
+      aggregationResult
+    );
   } catch (err) {
-    console.log(err);
+    next(err);
   }
 };
 
 export const findOneProduct = async (req, res, next) => {
-  const checkProduct = await productServices.findProductOne({
-    id: req.body.id,
-  });
-
-  if (!checkProduct) {
-    return res.status(400).json({
-      message: "Product Not Found",
+  try {
+    const checkProduct = await productServices.findProductOne({
+      _id: req.params.id,
     });
-  }
 
-  return res.status(200).json({
-    message: "Succesfully Fetched",
-    checkProduct,
-  });
+    if (!checkProduct) {
+      throw new BadRequestError("Product Not Found"); // Corrected errorServices to BadRequestError
+    }
+
+    return sendResponse(res, 200, "Product list", checkProduct);
+  } catch (error) {
+    next(error);
+  }
 };
 
 export const updateProduct = async (req, res, next) => {
   try {
     const checkProduct = await productServices.findProductOne({
-      id: req.body.id,
+      _id: req.params.id,
     });
 
     if (!checkProduct) {
-      return res.status(400).json({
-        message: "Product Not Found",
-      });
+      throw new BadRequestError("Product not found"); // Corrected errorServices to BadRequestError
+    }
+
+    const productExist = await productServices.findProductOne({
+      productName: req.body.productName,
+      _id: { $ne: req.params.id },
+    });
+
+    if (productExist) {
+      throw new BadRequestError("Product Already Exists");
     }
 
     const updatedProductData = await productServices.updateProduct(
-      { _id: checkProduct },
-      req.body
+      { _id: req.params.id },
+      {
+        productName: req.body.productName,
+        color: req.body.color,
+      }
     );
 
     if (!updatedProductData) {
-      return res.status(401).json({
-        Message: "Please Enter Data to be Update",
-      });
+      throw new BadRequestError("Please Enter the Data to be Update"); // Corrected errorServices to BadRequestError
     }
 
-    return res.status(200).json({
-      message: "Updated Succesfully",
-    });
+    return sendResponse(res, 200, "Updated");
   } catch (error) {
-    console.log("Error:", error);
+    next(error);
   }
 };
 
 export const deleteProduct = async (req, res, next) => {
   try {
-    const checkProduct = await productServices.deleteProduct({
-      id: req.body.id,
+    const checkProduct = await productServices.findProductOne({
+      _id: req.params.id,
     });
-
     if (!checkProduct) {
-      return res.status(400).json({
-        message: "User Not Found",
-      });
+      throw new BadRequestError("Product not found"); // Corrected errorServices to BadRequestError
     }
 
-    const deletedProductData = await productServices.deleteProduct({
-      id: req.body.checkProduct,
-    });
+    const softDeleted = await productServices.updateProduct(
+      {
+        _id: req.params.id,
+      },
+      { isDeleted: true }
+    );
 
-    return res.status(200).json({
-      message: "Deleted Succesfully",
-    });
+    return sendResponse(res, 200, "Delete Successful");
   } catch (error) {
-    console.log("Error:", error);
+    next(error);
   }
 };

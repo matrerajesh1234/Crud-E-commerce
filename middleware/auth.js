@@ -1,32 +1,34 @@
 import jwt from "jsonwebtoken";
 import * as userServices from "../services/userServices.js";
+import { BadRequestError } from "../error/error.js";
+import { sendToken } from "../utils/services.js";
 
 const authentication = async (req, res, next) => {
-  const authorization = await req.headers["authorization"];
-
-  if (!authorization || !authorization.startsWith("Bearer ")) {
-    return res.status(400).json({
-      message: "Please Enter the Token",
-    });
-  }
-
-  const token = authorization.split(" ")[1];
-
-  if (!token) {
-    return res.status(400).json({
-      message: "Invalid Token",
-    });
-  }
-
   try {
-    const decoded = await jwt.verify(token, process.env.SECRET);
-    const userData = await userServices.userFindOne({ _id: decoded._id });
-    req.user = userData;
-  } catch (error) {
-    return res.status(400).json({ Error: error });
-  }
+    const authorization = req.headers.authorization;
 
-  next();
+    if (!authorization || !authorization.startsWith("Bearer ")) {
+      throw new BadRequestError("Please Enter the Token");
+    }
+
+    const token = authorization.split(" ")[1];
+
+    if (!token) {
+      throw new BadRequestError("Invalid Token");
+    }
+
+    const decoded = sendToken(token, process.env.SECRET);
+    const userData = await userServices.userFindOne({ _id: decoded._id });
+
+    if (!userData) {
+      throw new BadRequestError("User Not Found");
+    }
+
+    req.user = userData;
+    next();
+  } catch (error) {
+    next(error);
+  }
 };
 
 export default authentication;

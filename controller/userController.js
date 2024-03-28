@@ -1,31 +1,27 @@
-import * as userServices from "../services/userServices.js";
 import jwt from "jsonwebtoken";
+import { sendResponse } from "../utils/sendResponse.js";
+import { getJWTToken } from "../utils/services.js";
+import { BadRequestError } from "../error/error.js";
+import * as userServices from "../services/userServices.js"; // Changed import statement
 
 export const registerUser = async (req, res, next) => {
   try {
     const { email } = req.body;
-    const checkUser = await userServices.userFindOne({ email });
+    const findUser = await userServices.userFindOne({ email });
 
-    if (checkUser) {
-      return res.status(401).json({
-        Message: "User Already Exists",
-      });
+    if (findUser) {
+      throw new BadRequestError("User Already Exists");
     }
 
     const createUserData = await userServices.createUser(req.body);
 
     if (!createUserData) {
-      return res.status(200).json({
-        message: "Registration falied",
-      });
+      throw new BadRequestError("Registration Failed");
     }
 
-    return res.status(200).json({
-      Message: "Registration Succesfully",
-      createUserData,
-    });
+    return sendResponse(res, 200, "Registration Successfully", createUserData);
   } catch (err) {
-    console.log(err);
+    next(err);
   }
 };
 
@@ -34,113 +30,109 @@ export const loginUser = async (req, res, next) => {
     const { email, password } = req.body;
 
     if (!email || !password) {
-      console.log("Please Enter Email or Password");
+      throw new BadRequestError("Please Enter Email or Password"); // Corrected errorServices to BadRequestError
     }
-
     const checkUser = await userServices.userFindOne({
-      email: email,
-      password: password,
+      email: req.body.email,
     });
 
     if (!checkUser) {
-      return res.status(401).json({
-        message: "Invalid Email or Password",
-      });
+      throw new BadRequestError("Email Not found ");
     }
 
-    const token = jwt.sign({ _id: checkUser.id }, process.env.SECRET, {
-      expiresIn: "1h",
-    });
+    if (checkUser.password !== password) {
+      throw new BadRequestError("Invalid Email or Password");
+    }
 
-    return res.status(200).json({
-      message: "login Sucessfully",
-      token,
-    });
+    const token = getJWTToken(checkUser._id, process.env.SECRET, "1h");
+
+    return sendResponse(res, 200, "Login Successfully", token);
   } catch (err) {
-    console.log(err);
+    next(err);
   }
 };
 
 export const listAllUser = async (req, res, next) => {
   try {
-    const userData = await userServices.listAllUser();
-    if (!userData) {
-      return res.status(400).json({
-        message: "Invalid Request",
-      });
+    const userList = await userServices.listAllUser();
+    if (!userList) {
+      throw new BadRequestError("Invalid Request"); // Corrected errorServices to BadRequestError
     }
 
-    return res.status(200).json({
-      message: "Fetching all Users from Database",
-      userData,
-    });
+    return sendResponse(res, 200, "Fetching all Users from Database", userList);
   } catch (err) {
-    console.log(err);
+    next(err);
   }
 };
 
-export const FindOneUser = async (req, res, next) => {
-  const checkUser = await userServices.userFindOne({ id: req.body.id });
+export const findOneUser = async (req, res, next) => {
+  try {
+    const checkUser = await userServices.userFindOne({ _id: req.params.id });
+    console.log(checkUser);
 
-  if (!checkUser) {
-    return res.status(400).json({
-      message: "User Not Found",
-    });
+    if (!checkUser) {
+      throw new BadRequestError("User not found"); // Corrected errorServices to BadRequestError
+    }
+
+    return sendResponse(res, 200, "Successfully Fetched", checkUser);
+  } catch (error) {
+    next(error);
   }
-
-  return res.status(200).json({
-    message: "Succesfully Fetched",
-    checkUser,
-  });
 };
 
 export const updateUser = async (req, res, next) => {
   try {
-    const checkUser = await userServices.userFindOne({ id: req.body.id });
+    const findUser = await userServices.userFindOne({ _id: req.params.id });
 
-    if (!checkUser) {
-      return res.status(400).json({
-        message: "User Not Found",
-      });
+    if (!findUser) {
+      throw new BadRequestError("User Not Found");
+    }
+
+    const emailExits = await userServices.userFindOne({
+      email: req.body.email,
+      _id: { $ne: req.body.id },
+    });
+
+    if (emailExits) {
+      throw new BadRequestError("Duplicate Email Error");
     }
 
     const updatedUserData = await userServices.updateUser(
-      { _id: checkUser },
-      req.body
+      { _id: req.params.id }, // Corrected _id: checkUser._id
+      {
+        username: req.body.username,
+        email: req.body.email,
+        password: req.body.password,
+      }
     );
 
     if (!updatedUserData) {
-      return res.status(401).json({
-        Message: "Please Enter Data to be Update",
-      });
+      throw new BadRequestError("Please Enter Data to be Update"); // Corrected errorServices to BadRequestError
     }
 
-    return res.status(200).json({
-      message: "Updated Succesfully",
-    });
-  } catch (error) {
-    console.log("Error:", error);
+    return sendResponse(res, 200, "Updated Successfully");
+  } catch (err) {
+    next(err);
   }
 };
 
 export const deleteUser = async (req, res, next) => {
   try {
-    const checkUser = await userServices.userFindOne({ id: req.body.id });
+    const checkUser = await userServices.userFindOne({ _id: req.params.id });
 
     if (!checkUser) {
-      return res.status(400).json({
-        message: "User Not Found",
-      });
+      throw new BadRequestError("User Not Found"); // Corrected errorServices to BadRequestError
     }
 
-    const deleteUserData = await userServices.deleteUser({
-      id: req.body.checkUser,
-    });
+    const softDeleted = await userServices.updateUser(
+      {
+        _id: req.params.id,
+      },
+      { isDeleted: true }
+    );
 
-    return res.status(200).json({
-      message: "Deleted Succesfully",
-    });
-  } catch (error) {
-    console.log("Error:", error);
+    return sendResponse(res, 200, "Deleted Successfully");
+  } catch (err) {
+    next(err);
   }
 };
