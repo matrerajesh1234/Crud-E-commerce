@@ -7,15 +7,8 @@ const productSchema = new mongoose.Schema(
       required: true,
       unique: true,
     },
-    // imageUrl:{
-    //   type:String,
-    // },
     description: {
       type: String,
-    },
-    categoryId: {
-      type: mongoose.Schema.Types.ObjectId,
-      ref: "categoryId",
     },
     productDetails: {
       type: String,

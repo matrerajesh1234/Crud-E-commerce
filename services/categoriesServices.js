@@ -24,7 +24,7 @@ export const findCategorieOne = async (filter, option) => {
 export const updateCategorie = async (categoriesId, categoriesData) => {
   return await categoriesModel.findOneAndUpdate(categoriesId, categoriesData);
 };
-
+  
 export const deleteCategorie = async (categoriesData) => {
   return await categoriesModel.findOneAndDelete(categoriesData);
 };

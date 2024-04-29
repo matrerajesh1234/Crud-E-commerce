@@ -1,12 +1,15 @@
 import express from "express";
 import authentication from "../middleware/auth.js";
-import * as productController from "../controller/productController.js";
+import {productController} from "../controller/index.js";
+import uploadMiddleware from "../middleware/multer.js";
 const router = express.Router();
 
-router.post("/create", productController.newProduct);
+
+router.post("/create",uploadMiddleware.array('imageUrl',5), productController.newProduct);
 router.get("/list", authentication, productController.listAllProduct);
 router.get("/findOneProduct/:id", productController.findOneProduct);
 router.put("/update/:id", authentication, productController.updateProduct);
 router.delete("/delete/:id", authentication, productController.deleteProduct);
 
 export default router;
+        

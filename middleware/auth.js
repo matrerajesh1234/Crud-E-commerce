@@ -1,15 +1,14 @@
-import jwt from "jsonwebtoken";
-import * as userServices from "../services/userServices.js";
+import * as  userServices from "../services/userServices.js";
 import { BadRequestError } from "../error/error.js";
-import { sendToken } from "../utils/services.js";
+import { sendToken }from "../utils/services.js";
 
 const authentication = async (req, res, next) => {
-  try {
-    const authorization = req.headers.authorization;
+    try {
+      const authorization = req.headers.authorization;
 
-    if (!authorization || !authorization.startsWith("Bearer ")) {
-      throw new BadRequestError("Please Enter the Token");
-    }
+      if (!authorization || !authorization.startsWith("Bearer ")) {
+        throw new BadRequestError("Please Enter the Token");
+      }
 
     const token = authorization.split(" ")[1];
 
@@ -24,7 +23,8 @@ const authentication = async (req, res, next) => {
       throw new BadRequestError("User Not Found");
     }
 
-    req.user = userData;
+    req.user = userData; 
+    req.token = token;
     next();
   } catch (error) {
     next(error);

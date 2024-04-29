@@ -1,8 +1,15 @@
-import * as productServices from "../services/productServices.js";
-import { paginationAndSorting, search } from "../utils/services.js";
-import { sendResponse } from "../utils/sendResponse.js";
+// import * as productServices from "../services/productServices.js";
+import { productServices } from "../services/index.js";
+import ImageProductModel from "../models/imageProductModel.js";
+import productCategoryRelationModel from "../models/productCategoryRelationModel.js";
+
+import {
+  paginatedResponse,
+  paginationAndSorting,
+  search,
+} from "../utils/services.js";
 import { BadRequestError } from "../error/error.js"; // Corrected import statement
-import productModel from "../models/productModel.js";
+import { sendResponse } from "../utils/sendResponse.js";
 
 export const newProduct = async (req, res, next) => {
   try {
@@ -13,11 +20,32 @@ export const newProduct = async (req, res, next) => {
       throw new BadRequestError("Product Already Exists"); // Corrected errorServices to BadRequestError
     }
 
-    const productList = await productServices.createProduct(req.body);
+    const productList = await productServices.createProduct({
+      productName: req.body.productName,
+      description: req.body.description,
+      productDetails: req.body.productDetails,
+      price: req.body.price,
+      color: req.body.color,
+    });
 
     if (!productList) {
       throw new BadRequestError("Product Adding Process Failed"); // Corrected errorServices to BadRequestError
     }
+
+    const imageObjects = req.files.map((file) => {
+      const imagePath = file.path;
+      return { productId: productList._id, imageUrl: imagePath };
+    });
+    await ImageProductModel.insertMany(imageObjects);
+    
+    const productCategoryData = req.body.categoryId;
+
+    const productCategoryRelationResult = productCategoryData.map((elem) => {
+      return { productId: productList._id, categoryId: elem };
+    });
+    await productCategoryRelationModel.insertMany(
+      productCategoryRelationResult
+    );
 
     return sendResponse(res, 200, "Product Added", productList);
   } catch (err) {
@@ -30,10 +58,11 @@ export const listAllProduct = async (req, res, next) => {
     const pagination = paginationAndSorting(req.query, "_id");
     const searching = search(req.query.search, [
       "productName",
-      "color",
+      "color",  
       "description",
-      "category.categoryName",
+      "productCatelogRelation.categoryName",
     ]);
+    const { totalRecords } = await productServices.filterPagination(searching);
     const aggregationResult = await productServices.executeAggregation(
       pagination,
       searching
@@ -42,11 +71,19 @@ export const listAllProduct = async (req, res, next) => {
     if (!aggregationResult || aggregationResult.length === 0) {
       throw new BadRequestError("Product Not Found"); // Corrected errorServices to BadRequestError
     }
+
+    let paginatatedData = paginatedResponse(
+      aggregationResult,
+      pagination.pageCount,
+      pagination.limitCount,
+      totalRecords
+    );
+
     return sendResponse(
       res,
       200,
       "Fetching all products from the database",
-      aggregationResult
+      paginatatedData
     );
   } catch (err) {
     next(err);

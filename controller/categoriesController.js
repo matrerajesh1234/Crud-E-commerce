@@ -1,5 +1,5 @@
 import categoriesModel from "../models/categories.js";
-import * as categoriesServices from "../services/categoriesServices.js";
+import { categoriesServices } from "../services/index.js";
 import { sendResponse } from "../utils/sendResponse.js";
 import { BadRequestError } from "../error/error.js"; // Corrected import statement
 
@@ -37,7 +37,6 @@ export const listAllCategorie = async (req, res, next) => {
     if (!categoryData) {
       throw new BadRequestError("Category Not Found"); // Corrected errorServices to BadRequestError
     }
-
     return sendResponse(
       res,
       200,

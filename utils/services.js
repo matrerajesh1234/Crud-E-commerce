@@ -5,16 +5,26 @@ export const paginationAndSorting = (query, defaultSorting) => {
 
   const pageCount = Number(page) || 1;
   const limitCount = Number(limit) || 10;
-  const sortFiled = sortBy || defaultSorting;
+  const sortField = sortBy || defaultSorting;
   const sortOrderValue = sortOrder === "asc" ? 1 : -1;
 
   const skip = (pageCount - 1) * limitCount;
-  const sorting = { [sortFiled]: sortOrderValue };
+  const sorting = { [sortField]: sortOrderValue };
   return {
-    page,
+    pageCount,
     skip,
     limitCount,
     sorting,
+  };
+};
+
+export const paginatedResponse = (data, page, limitCount, totalCount) => {
+  return {
+    list: data,
+    page: page,
+    limit: limitCount,
+    totalRecords: totalCount,
+    totalPage: Math.ceil(totalCount / limitCount),
   };
 };
 

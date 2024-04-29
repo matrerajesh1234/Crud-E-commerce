@@ -1,8 +1,10 @@
-import jwt from "jsonwebtoken";
 import { sendResponse } from "../utils/sendResponse.js";
-import { getJWTToken } from "../utils/services.js";
+import { getJWTToken, sendToken } from "../utils/services.js";
 import { BadRequestError } from "../error/error.js";
-import * as userServices from "../services/userServices.js"; // Changed import statement
+import { userServices } from "../services/index.js";
+import { MailService } from "../utils/mail.js";
+import path from "path";
+import Twilio from "twilio/lib/rest/Twilio.js";
 
 export const registerUser = async (req, res, next) => {
   try {
@@ -68,7 +70,6 @@ export const listAllUser = async (req, res, next) => {
 export const findOneUser = async (req, res, next) => {
   try {
     const checkUser = await userServices.userFindOne({ _id: req.params.id });
-    console.log(checkUser);
 
     if (!checkUser) {
       throw new BadRequestError("User not found"); // Corrected errorServices to BadRequestError
@@ -134,5 +135,96 @@ export const deleteUser = async (req, res, next) => {
     return sendResponse(res, 200, "Deleted Successfully");
   } catch (err) {
     next(err);
+  }
+};
+
+export const forgotPassword = async (req, res, next) => {
+  const checkUser = await userServices.userFindOne({ _id: req.params.id });
+
+  if (!checkUser) {
+    throw new Error("User not found");
+  }
+  const { id } = checkUser;
+  let token = getJWTToken(id, process.env.SECRET, "5m");
+  const resetLink = path.join(process.env.BASEURL, token);
+  MailService(checkUser.email, "Jaldi kholo", resetLink);
+  sendResponse(res, 200, `Email Send to ${checkUser.email}`);
+};
+
+export const resetPassword = async (req, res, next) => {
+  const { token, newPassword } = req.body;
+
+  const decord = sendToken(token, process.env.SECRET);
+  const User = await userServices.userFindOne({ _id: decord._id });
+
+  if (!User) {
+    throw new BadRequestError("User not found");
+  }
+  const userEmail = User.email;
+
+  const updatePassword = await userServices.updateUser(
+    {
+      email: userEmail,
+    },
+    {
+      password: req.body.newPassword,
+    }
+  );
+
+  if (!updatePassword) {
+    throw new BadRequestError("Something went wrong in password");
+  }
+
+  sendResponse(res, 200, "Password Change Successfully");
+};
+
+export const otpSender = async (req, res, next) => {
+  try {
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    const client = new Twilio(accountSid, authToken);
+    const serviceSid = process.env.TWILIO_SERVICE_SID;
+
+    const otp = client.verify.v2
+      .services(serviceSid)
+      .verifications.create({ to: "+919313782326", channel: "sms" })
+      .then((verification) => console.log(verification.sid));
+
+    sendResponse(res, 200, "Otp Send Succesfully");
+  } catch (error) {
+    console.error("Error sending verification message:", error);
+    sendResponse(res, 400, "Verification failed");
+  }
+};
+
+export const otpVerifier = async (req, res, next) => {
+  try {
+    const accountSid = process.env.TWILIO_ACCOUNT_SID;
+    const authToken = process.env.TWILIO_AUTH_TOKEN;
+    const serviceSid = process.env.TWILIO_SERVICE_SID;
+    const client = new Twilio(accountSid, authToken);
+    const otp = req.body.otp;
+    const toNumber = req.body.number;
+
+    const userFind = await userServices.userFindOne({
+      phoneNumber: "+919313782326",
+    });
+    const userId = userFind._id;
+
+    const verification = await client.verify.v2
+      .services(serviceSid)
+      .verificationChecks.create({ to: toNumber, code: otp });
+
+    console.log(verification.status);
+
+    if (verification.status !== "approved") {
+      throw new BadRequestError("Invalid OTP");
+    }
+
+    const token = getJWTToken(userId, process.env.SECRET, "5m");
+
+    sendResponse(res, 200, "Otp Verified", token);
+  } catch (error) {
+    next(error);
   }
 };

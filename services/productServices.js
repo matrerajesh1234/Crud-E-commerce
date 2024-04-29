@@ -1,4 +1,5 @@
 import productModel from "../models/productModel.js";
+import { paginatedResponse } from "../utils/services.js";
 
 export const createProduct = async (productData) => {
   return await productModel.create(productData);
@@ -39,19 +40,61 @@ export const deleteProduct = async (productData) => {
 
 export const executeAggregation = async (pagination, searching) => {
   const { skip, limitCount, sorting } = pagination;
-  const totalCount = await productModel.countDocuments(searching);
 
   const data = await productModel.aggregate(
     [
       {
         $lookup: {
-          from: "categories",
-          localField: "categoryId",
-          foreignField: "_id",
-          as: "category",
+          from: "imageproducts",
+          localField: "_id",
+          foreignField: "productId",
+          as: "images",
         },
       },
-      
+      {
+        $lookup: {
+          from: "productcategoryrelations",
+          let: { productId: "$_id" },
+          pipeline: [
+            {
+              $match: {
+                $expr: {
+                  $eq: ["$productId", "$$productId"],
+                },
+              },
+            },
+            {
+              $lookup: {
+                from: "categories",
+                let: { categoryId: "$categoryId" },
+                pipeline: [
+                  {
+                    $match: {
+                      $expr: {
+                        $eq: ["$_id", "$$categoryId"],
+                      },
+                    },
+                  },
+                  {
+                    $project: {
+                      id: 1,
+                      categoryName: 1,
+                    },
+                  },
+                ],
+                as: "category",
+              },
+            },
+            {
+              $project: {
+                id: 1,
+                categoryName: { $arrayElemAt: ["$category.categoryName", 0] },
+              },
+            },
+          ],
+          as: "productCatelogRelation",
+        },
+      },
       {
         $match: { ...searching, isDeleted: false, isActive: true },
       },
@@ -68,7 +111,19 @@ export const executeAggregation = async (pagination, searching) => {
           isDeleted: 1,
           createdAt: 1,
           updatedAt: 1,
-          categoryName: 1,
+          category: "$productCatelogRelation",
+            image: {
+              $map: {
+                input: "$images",
+                as: "productImage",
+                in: {
+                  id: "$$productImage._id",
+                  url: {
+                    $concat: [process.env.BASEURL, "$$productImage.imageUrl"],
+                  },
+                },
+              },
+            },
         },
       },
       {
@@ -84,13 +139,67 @@ export const executeAggregation = async (pagination, searching) => {
     { collation: { locale: "en" } }
   );
 
-  const totalPage = Math.ceil(totalCount / limitCount);
+  return data;
+};
 
+export const filterPagination = async (filter) => {
+  const filterData = await productModel.aggregate([
+    {
+      $lookup: {
+        from: "productcategoryrelations",
+        let: { productId: "$_id" },
+        pipeline: [
+          {
+            $match: {
+              $expr: {
+                $eq: ["$productId", "$$productId"],
+              },
+            },
+          },
+          {
+            $lookup: {
+              from: "categories",
+              let: { categoryId: "$categoryId" },
+              pipeline: [
+                {
+                  $match: {
+                    $expr: {
+                      $eq: ["$_id", "$$categoryId"],
+                    },
+                  },
+                },
+                {
+                  $project: {
+                    id: 1,
+                    categoryName: 1,
+                  },
+                },
+              ],
+              as: "category",
+            },
+          },
+          {
+            $project: {
+              id: 1,
+              categoryName: { $arrayElemAt: ["$category.categoryName", 0] },
+            },
+          },
+        ],
+        as: "productCatelogRelation",
+      },
+    },
+    {
+      $match: { ...filter, isDeleted: false },
+    },
+    {
+      $project: {
+        _id: 1,
+      },
+    },
+  ]);
+
+  const totalRecords = filterData.length;
   return {
-    list: data,
-    page: pagination.page,
-    limit: limitCount,
-    totalRecords: totalCount,
-    totalPage: totalPage,
+    totalRecords,
   };
 };
