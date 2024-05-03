@@ -152,30 +152,34 @@ export const forgotPassword = async (req, res, next) => {
 };
 
 export const resetPassword = async (req, res, next) => {
-  const { token, newPassword } = req.body;
+  try {
+    const { token, newPassword } = req.body;
 
-  const decord = sendToken(token, process.env.SECRET);
-  const User = await userServices.userFindOne({ _id: decord._id });
+    const decord = sendToken(token, process.env.SECRET);
+    const User = await userServices.userFindOne({ _id: decord._id });
 
-  if (!User) {
-    throw new BadRequestError("User not found");
-  }
-  const userEmail = User.email;
-
-  const updatePassword = await userServices.updateUser(
-    {
-      email: userEmail,
-    },
-    {
-      password: req.body.newPassword,
+    if (!User) {
+      throw new BadRequestError("User not found");
     }
-  );
+    const userEmail = User.email;
 
-  if (!updatePassword) {
-    throw new BadRequestError("Something went wrong in password");
+    const updatePassword = await userServices.updateUser(
+      {
+        email: userEmail,
+      },
+      {
+        password: req.body.newPassword,
+      }
+    );
+
+    if (!updatePassword) {
+      throw new BadRequestError("Something went wrong in password");
+    }
+
+    sendResponse(res, 200, "Password Change Successfully");
+  } catch (error) {
+    next(error);
   }
-
-  sendResponse(res, 200, "Password Change Successfully");
 };
 
 export const otpSender = async (req, res, next) => {

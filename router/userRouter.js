@@ -7,68 +7,49 @@ import { userSchemas } from "../middleware/schemas.js";
 
 router.post(
   "/register",
-  validationMiddleware(userSchemas.body.validRegistration),
+  validationMiddleware(userSchemas.body.validRegistration, "body"),
   userController.registerUser
 );
-
 router.post(
   "/login",
-  validationMiddleware(userSchemas.body.validLogin),
+  validationMiddleware(userSchemas.body.validLogin, "body"),
   userController.loginUser
 );
-
 router.get("/list", userController.listAllUser);
-
 router.get(
   "/:id",
-  validationMiddleware(null, userSchemas.params.validId),
+  validationMiddleware(userSchemas.params.validId, "params"),
   authentication,
   userController.findOneUser
 );
-
 router.put(
   "/update/:id",
-  validationMiddleware(
-    userSchemas.body.validUpdate,
-    userSchemas.params.validId
-  ),
+  validationMiddleware(userSchemas.body.validUpdate, "body"),
+  validationMiddleware(userSchemas.params.validId, "params"),
   authentication,
   userController.updateUser
 );
-
 router.delete(
   "/delete/:id",
-  validationMiddleware(null, userSchemas.params.validId),
+  validationMiddleware(userSchemas.params.validId, "params"),
   authentication,
   userController.deleteUser
 );
-
 router.post(
   "/forgotpassword/:id",
-  validationMiddleware(
-    userSchemas.body,
-    userSchemas.params.validId,
-    userSchemas.query
-  ),
+  validationMiddleware(userSchemas.params.validId, "params"),
   authentication,
   userController.forgotPassword
 );
-
 router.post(
   "/resetpassword",
-  // validationMiddleware(userSchemas.ValidResetPassword),
+  validationMiddleware(userSchemas.body.validResetPassword,"body"),
   userController.resetPassword
 );
-
 router.post("/otp", userController.otpSender);
-
 router.post(
   "/verifyotp",
-  validationMiddleware(
-    userSchemas.body.validVerifyOtp,
-    userSchemas.params,
-    userSchemas.query
-  ),
+  validationMiddleware(userSchemas.body.validVerifyOtp, "body"),
   userController.otpVerifier
 );
 
