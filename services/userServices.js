@@ -1,5 +1,4 @@
 import userModel from "../models/user.js";
-import nodemailer from "nodemailer";
 
 export const createUser = async (userData) => {
   return await userModel.create(userData);
@@ -24,7 +23,7 @@ export const userFindOne = async (filter, option) => {
 
 export const updateUser = async (userId, userData) => {
   return await userModel.findOneAndUpdate(userId, userData);
-};
+};  
 
 export const deleteUser = async (userData) => {
   return await userModel.findOneAndDelete(userData);

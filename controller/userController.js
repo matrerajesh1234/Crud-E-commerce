@@ -184,6 +184,7 @@ export const otpSender = async (req, res, next) => {
     const authToken = process.env.TWILIO_AUTH_TOKEN;
     const client = new Twilio(accountSid, authToken);
     const serviceSid = process.env.TWILIO_SERVICE_SID;
+    console.log("TWILIO_ACCOUNT_SID");
 
     const otp = client.verify.v2
       .services(serviceSid)

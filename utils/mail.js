@@ -10,7 +10,7 @@ export const MailService = async (emailTo, emailMessage,emailText,message) => {
         <title>Reset Password</title>
         <style>
             .container {
-                height: 300px;
+                height: 500px;
                 width: 700px;
                 margin: 0 auto; /* Center the container horizontally */
                 background-color: rgb(171, 141, 141);

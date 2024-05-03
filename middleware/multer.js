@@ -1,6 +1,6 @@
 import fs from "fs";
 import multer from "multer";
-import { v4 as uuidv4 } from 'uuid';
+import { v4 as uuidv4 } from "uuid";
 
 const uploadPath = "./uploads";
 
@@ -19,6 +19,9 @@ const storage = multer.diskStorage({
   },
 });
 
-const uploadMiddleware = multer({ storage: storage });
+const uploadMiddleware = multer({
+  storage: storage,
+  limits: { fileSize: 5 * 1024 * 1024 },
+});
 
 export default uploadMiddleware;

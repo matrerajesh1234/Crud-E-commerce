@@ -1,6 +1,6 @@
 export function sendResponse(res, statusCode, message, data) {
-  if (!statusCode >= 300) {
-    return res.statusCode(statusCode).json({
+  if (statusCode >= 300) {
+    return res.status(statusCode).json({
       success: false,
       message: message,
     });

@@ -60,6 +60,9 @@ export const findOneCategorie = async (req, res, next) => {
 
     return sendResponse(res, 200, "Succesfully Fetched", checkCategorie);
   } catch (error) {
+    if (error.name === 'CastError') {
+      return sendResponse(res, 404, "Invalid Category ID");
+    }
     next(error);
   }
 };

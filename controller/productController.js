@@ -14,6 +14,7 @@ import { sendResponse } from "../utils/sendResponse.js";
 export const newProduct = async (req, res, next) => {
   try {
     const { productName } = req.body;
+    console.log(productName)
     const checkProduct = await productServices.findProductOne({ productName });
 
     if (checkProduct) {
