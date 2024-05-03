@@ -12,9 +12,7 @@ export const validationMiddleware = (schema, property) => {
       next();
     } else {
       const errorMessages = error.details.map((err) => err.message);
-      res.status(400).json({
-        message:errorMessages
-      })
+     res.status(400).json(errorMessages)
     }
   };
 };

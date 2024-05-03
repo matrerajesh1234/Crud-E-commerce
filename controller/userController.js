@@ -188,8 +188,6 @@ export const otpSender = async (req, res, next) => {
     const authToken = process.env.TWILIO_AUTH_TOKEN;
     const client = new Twilio(accountSid, authToken);
     const serviceSid = process.env.TWILIO_SERVICE_SID;
-    console.log("TWILIO_ACCOUNT_SID");
-
     const otp = client.verify.v2
       .services(serviceSid)
       .verifications.create({ to: "+919313782326", channel: "sms" })
@@ -219,8 +217,6 @@ export const otpVerifier = async (req, res, next) => {
     const verification = await client.verify.v2
       .services(serviceSid)
       .verificationChecks.create({ to: toNumber, code: otp });
-
-    console.log(verification.status);
 
     if (verification.status !== "approved") {
       throw new BadRequestError("Invalid OTP");

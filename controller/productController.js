@@ -14,7 +14,7 @@ import { sendResponse } from "../utils/sendResponse.js";
 export const newProduct = async (req, res, next) => {
   try {
     const { productName } = req.body;
-    console.log(productName)
+    console.log(productName);
     const checkProduct = await productServices.findProductOne({ productName });
 
     if (checkProduct) {
@@ -38,7 +38,7 @@ export const newProduct = async (req, res, next) => {
       return { productId: productList._id, imageUrl: imagePath };
     });
     await ImageProductModel.insertMany(imageObjects);
-    
+
     const productCategoryData = req.body.categoryId;
 
     const productCategoryRelationResult = productCategoryData.map((elem) => {
@@ -59,7 +59,7 @@ export const listAllProduct = async (req, res, next) => {
     const pagination = paginationAndSorting(req.query, "_id");
     const searching = search(req.query.search, [
       "productName",
-      "color",  
+      "color",
       "description",
       "productCatelogRelation.categoryName",
     ]);
@@ -138,7 +138,7 @@ export const updateProduct = async (req, res, next) => {
       throw new BadRequestError("Please Enter the Data to be Update"); // Corrected errorServices to BadRequestError
     }
 
-    return sendResponse(res, 200, "Updated");
+    return sendResponse(res, 200, "Product Update Successfull");
   } catch (error) {
     next(error);
   }
